@@ -4,9 +4,14 @@ Module to transcribe audio using Vosk and some utility functions.
 import os
 import json
 import time
+import re
 
+import RAKE
 from vosk import Model, KaldiRecognizer
 from pydub import AudioSegment
+
+
+rake = RAKE.Rake(RAKE.SmartStopList())
 
 
 def transcribe_audio_vosk(audio_path: str, model_path: str):
@@ -61,7 +66,7 @@ def format_time(seconds: float) -> str:
     return f"{seconds / 3600:.2f} hours"
 
 
-def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 60000) -> str:
+def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 60000) -> tuple:
     """
     Transcribe an audio file by splitting it into chunks.
 
@@ -75,6 +80,7 @@ def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 6
     """
     audio_name = os.path.splitext(os.path.basename(audio_path))[0]
     chunk_dir = f'data/processed/audio/chunk/{audio_name}/'
+    
     if not os.path.exists(chunk_dir):
         os.makedirs(chunk_dir)
 
@@ -82,6 +88,7 @@ def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 6
     num_chunks = len(audio) // chunk_length + (1 if len(audio) % chunk_length else 0)
 
     transcriptions = []
+    indices = []
     for i in range(num_chunks):
         start_time = i * chunk_length
         end_time = (i+1) * chunk_length
@@ -89,15 +96,45 @@ def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 6
 
         chunk_filename = os.path.join(chunk_dir, f'chunk_{i}.wav')
         chunk.export(chunk_filename, format='wav')
+
         chunk_transcription = transcribe_audio_vosk(chunk_filename, model_path)
         transcriptions.append(chunk_transcription)
 
-    return ' '.join(transcriptions)
+        chunk_indices = generate_index_for_chunk(chunk_transcription, start_time)
+        indices.extend(chunk_indices)
+
+    return ' '.join(transcriptions), indices
+
+
+def extract_keywords(text):
+    return rake.run(text)
+
+
+def segment_into_sentences(text):
+    return re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
+
+
+def generate_index_for_chunk(transcription, start_time):
+    sentences = segment_into_sentences(transcription)
+
+    index = []
+    for sentence in sentences:
+        keywords = extract_keywords(sentence)
+        for keyword, score in keywords:
+            entry = {
+                'keyword': keyword,
+                'score': score,
+                'start_time': format_time(start_time)
+            }
+            index.append(entry)
+
+    return index
 
 
 if __name__ == '__main__':
-    AUDIO_PATH = "data/processed/audio/ptbr_short_example.wav"
-    MODEL_PATH = "models/vosk/vosk-model-small-pt-0.3"
+    AUDIO_PATH = "data/processed/audio/short_example.wav"
+    MODEL_PATH = "models/vosk/vosk-model-small-en-us-0.15"
+    # MODEL_PATH = "models/vosk/vosk-model-small-pt-0.3"
 
     file_name = os.path.basename(AUDIO_PATH)
     json_name = os.path.splitext(file_name)[0] + ".json"
@@ -105,7 +142,7 @@ if __name__ == '__main__':
 
     START_TIME = time.time()
 
-    TRANSCRIPTION = transcribe_by_chunks(AUDIO_PATH, MODEL_PATH)
+    TRANSCRIPTION, INDICES = transcribe_by_chunks(AUDIO_PATH, MODEL_PATH)
 
     elapsed_time = time.time() - START_TIME
     formatted_time = format_time(elapsed_time)
@@ -114,7 +151,8 @@ if __name__ == '__main__':
         "name": file_name,
         "path": AUDIO_PATH,
         "processing_time": formatted_time,
-        "transcription": TRANSCRIPTION
+        "transcription": TRANSCRIPTION,
+        'indices': INDICES
     }
 
     save_to_json(data_to_save, JSON_OUTPUT_PATH)
