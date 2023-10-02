@@ -66,7 +66,7 @@ def format_time(seconds: float) -> str:
     return f"{seconds / 3600:.2f} hours"
 
 
-def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 60000) -> tuple:
+def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 30000) -> tuple:
     """
     Transcribe an audio file by splitting it into chunks.
 
@@ -100,7 +100,7 @@ def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 6
         chunk_transcription = transcribe_audio_vosk(chunk_filename, model_path)
         transcriptions.append(chunk_transcription)
 
-        chunk_indices = generate_index_for_chunk(chunk_transcription, start_time)
+        chunk_indices = generate_index_for_chunk(chunk_transcription, start_time, chunk_length)
         indices.extend(chunk_indices)
 
     return ' '.join(transcriptions), indices
@@ -114,19 +114,32 @@ def segment_into_sentences(text):
     return re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
 
 
-def generate_index_for_chunk(transcription, start_time):
+def generate_index_for_chunk(transcription, start_time_ms, chunk_length):
     sentences = segment_into_sentences(transcription)
+    
+    total_length = sum([len(sentence) for sentence in sentences])
 
     index = []
-    for sentence in sentences:
+    elapsed_time = 0  # Time elapsed since the start of the chunk
+    for i, sentence in enumerate(sentences):
         keywords = extract_keywords(sentence)
+
+        # Calculate the proportion of this sentence to the total transcription of the chunk.
+        sentence_proportion = len(sentence) / total_length if total_length else 0
+
+        # Estimate how long this sentence takes within the chunk.
+        sentence_duration_ms = chunk_length * sentence_proportion
+        estimated_start_time_seconds = (start_time_ms + elapsed_time) / 1000  # Convert to seconds
+
         for keyword, score in keywords:
             entry = {
                 'keyword': keyword,
                 'score': score,
-                'start_time': format_time(start_time)
+                'start_time': format_time(estimated_start_time_seconds)
             }
             index.append(entry)
+
+        elapsed_time += sentence_duration_ms
 
     return index
 
