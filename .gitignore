@@ -3,7 +3,9 @@ __pycache__
 
 .venv
 notes.md
+project_structure.md
 
+*.wav
 *.avi
 *.mp4
 *.webm
