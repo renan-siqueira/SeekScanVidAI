@@ -34,12 +34,15 @@ def get_audio_output_name(file_name: str) -> str:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        print('Please provide the video file path and the output audio name.')
-        sys.exit(1)
+    # if len(sys.argv) < 3:
+    #     print('Please provide the video file path and the output audio name.')
+    #     sys.exit(1)
 
-    VIDEO_PATH = sys.argv[1]
-    AUDIO_NAME = get_audio_output_name(sys.argv[2])
+    # VIDEO_PATH = sys.argv[1]
+    # AUDIO_NAME = get_audio_output_name(sys.argv[2])
+
+    VIDEO_PATH = 'data/raw/short_example.webm'
+    AUDIO_NAME = get_audio_output_name('data/processed/audio/short_example.wav')
 
     extract_audio_from_video(VIDEO_PATH, AUDIO_NAME)
     print(f'Audio extracted to: {AUDIO_NAME}')

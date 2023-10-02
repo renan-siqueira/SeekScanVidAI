@@ -14,6 +14,7 @@ platformdirs==3.10.0
 pycparser==2.21
 pydub==0.25.1
 pylint==2.17.7
+python-rake==1.5.0
 requests==2.31.0
 scipy==1.11.3
 smart-open==6.4.0
