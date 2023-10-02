@@ -32,6 +32,11 @@ def format_time(seconds: float) -> str:
 
 
 def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 60000) -> str:
+    audio_name = os.path.splitext(os.path.basename(audio_path))[0]
+    chunk_dir = f'data/processed/audio/chunk/{audio_name}/'
+    if not os.path.exists(chunk_dir):
+        os.makedirs(chunk_dir)
+
     audio = AudioSegment.from_wav(audio_path)
     num_chunks = len(audio) // chunk_length + (1 if len(audio) % chunk_length else 0)
 
@@ -41,7 +46,7 @@ def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 6
         end_time = (i+1) * chunk_length
         chunk = audio[start_time:end_time]
 
-        chunk_filename = f'data/processed/chunk_{i}.wav'
+        chunk_filename = os.path.join(chunk_dir, f'chunk_{i}.wav')
         chunk.export(chunk_filename, format='wav')
         chunk_transcription = transcribe_audio_vosk(chunk_filename, model_path)
         transcriptions.append(chunk_transcription)
@@ -50,12 +55,12 @@ def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 6
 
 
 if __name__ == '__main__':
-    AUDIO_PATH = "data/processed/ptbr_short_example.wav"
+    AUDIO_PATH = "data/processed/audio/ptbr_short_example.wav"
     MODEL_PATH = "models/vosk/vosk-model-small-pt-0.3"
 
     file_name = os.path.basename(AUDIO_PATH)
     json_name = os.path.splitext(file_name)[0] + ".json"
-    JSON_OUTPUT_PATH = os.path.join("data/processed", json_name)
+    JSON_OUTPUT_PATH = os.path.join("data/processed/json", json_name)
 
     START_TIME = time.time()
 
