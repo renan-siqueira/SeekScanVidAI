@@ -79,49 +79,75 @@ def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 3
     - Transcription of the audio.
     """
     audio_name = os.path.splitext(os.path.basename(audio_path))[0]
-    chunk_dir = f'data/processed/audio/chunk/{audio_name}/'
-    
-    if not os.path.exists(chunk_dir):
-        os.makedirs(chunk_dir)
+    chunk_dir = os.path.join('data', 'processed', 'audio', 'chunk', audio_name)
+
+    os.makedirs(chunk_dir, exist_ok=True)
 
     audio = AudioSegment.from_wav(audio_path)
-    num_chunks = len(audio) // chunk_length + (1 if len(audio) % chunk_length else 0)
+    num_chunks = len(audio) // chunk_length + bool(len(audio) % chunk_length)
 
     transcriptions = []
     indices = []
     for i in range(num_chunks):
-        start_time = i * chunk_length
-        end_time = (i+1) * chunk_length
-        chunk = audio[start_time:end_time]
-
+        chunk = audio[i * chunk_length:(i+1) * chunk_length]
         chunk_filename = os.path.join(chunk_dir, f'chunk_{i}.wav')
         chunk.export(chunk_filename, format='wav')
 
-        chunk_transcription = transcribe_audio_vosk(chunk_filename, model_path)
-        transcriptions.append(chunk_transcription)
+        transcription = transcribe_audio_vosk(chunk_filename, model_path)
+        transcriptions.append(transcription)
 
-        chunk_indices = generate_index_for_chunk(chunk_transcription, start_time, chunk_length)
+        chunk_indices = generate_index_for_chunk(transcription, i * chunk_length, chunk_length)
         indices.extend(chunk_indices)
 
     return ' '.join(transcriptions), indices
 
 
 def extract_keywords(text):
+    """
+    Extract keywords from the given text.
+
+    Parameters:
+    - text: The input text from which keywords are to be extracted.
+
+    Returns:
+    - A list of keywords extracted from the text.
+    """
     return rake.run(text)
 
 
 def segment_into_sentences(text):
+    """
+    Segment the provided text into sentences.
+
+    Parameters:
+    - text: The input text to be segmented into sentences.
+
+    Returns:
+    - A list of sentences.
+    """
     return re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
 
 
 def generate_index_for_chunk(transcription, start_time_ms, chunk_length):
+    """
+    Generate index data for a given audio chunk.
+
+    Parameters:
+    - transcription: The transcribed text of the audio chunk.
+    - start_time_ms: The starting time of the chunk in milliseconds.
+    - chunk_length: The length of the chunk in milliseconds.
+
+    Returns:
+    - A list of index data with keyword, score, and start time for each sentence 
+    in the transcription.
+    """
     sentences = segment_into_sentences(transcription)
-    
-    total_length = sum([len(sentence) for sentence in sentences])
+
+    total_length = sum(len(sentence) for sentence in sentences)
 
     index = []
-    elapsed_time = 0  # Time elapsed since the start of the chunk
-    for i, sentence in enumerate(sentences):
+    time_elapsed = 0  # Time elapsed since the start of the chunk
+    for _, sentence in enumerate(sentences):
         keywords = extract_keywords(sentence)
 
         # Calculate the proportion of this sentence to the total transcription of the chunk.
@@ -129,7 +155,7 @@ def generate_index_for_chunk(transcription, start_time_ms, chunk_length):
 
         # Estimate how long this sentence takes within the chunk.
         sentence_duration_ms = chunk_length * sentence_proportion
-        estimated_start_time_seconds = (start_time_ms + elapsed_time) / 1000  # Convert to seconds
+        estimated_start_time_seconds = (start_time_ms + time_elapsed) / 1000  # Convert to seconds
 
         for keyword, score in keywords:
             entry = {
@@ -139,7 +165,7 @@ def generate_index_for_chunk(transcription, start_time_ms, chunk_length):
             }
             index.append(entry)
 
-        elapsed_time += sentence_duration_ms
+        time_elapsed += sentence_duration_ms
 
     return index
 
