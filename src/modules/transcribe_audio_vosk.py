@@ -1,3 +1,6 @@
+"""
+Module to transcribe audio using Vosk and some utility functions.
+"""
 import os
 import json
 import time
@@ -7,6 +10,16 @@ from pydub import AudioSegment
 
 
 def transcribe_audio_vosk(audio_path: str, model_path: str):
+    """
+    Transcribe an audio file using the Vosk library.
+
+    Parameters:
+    - audio_path: Path to the audio file.
+    - model_path: Path to the Vosk model.
+
+    Returns:
+    - Transcription of the audio.
+    """
     model = Model(model_path)
     with open(audio_path, 'rb') as file:
         recognizer = KaldiRecognizer(model, 16000)
@@ -18,20 +31,48 @@ def transcribe_audio_vosk(audio_path: str, model_path: str):
 
 
 def save_to_json(data, path):
+    """
+    Save a dictionary to a JSON file.
+
+    Parameters:
+    - data: Dictionary to save.
+    - path: Path to the JSON file.
+    """
     with open(path, 'w', encoding='utf-8') as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
 
 
 def format_time(seconds: float) -> str:
+    """
+    Format time in seconds to a string representation.
+
+    Parameters:
+    - seconds: Time in seconds.
+
+    Returns:
+    - Formatted string representation of the time.
+    """
     if seconds < 60:
         return f"{seconds:.2f} seconds"
-    elif seconds < 3600:  # 60 minutos * 60 segundos
+
+    if seconds < 3600:  # 60 minutos * 60 segundos
         return f"{seconds / 60:.2f} minutes"
-    else:
-        return f"{seconds / 3600:.2f} hours"
+
+    return f"{seconds / 3600:.2f} hours"
 
 
 def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 60000) -> str:
+    """
+    Transcribe an audio file by splitting it into chunks.
+
+    Parameters:
+    - audio_path: Path to the audio file.
+    - model_path: Path to the Vosk model.
+    - chunk_length: Length of each chunk in milliseconds.
+
+    Returns:
+    - Transcription of the audio.
+    """
     audio_name = os.path.splitext(os.path.basename(audio_path))[0]
     chunk_dir = f'data/processed/audio/chunk/{audio_name}/'
     if not os.path.exists(chunk_dir):
