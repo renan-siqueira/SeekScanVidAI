@@ -2,6 +2,9 @@ __pycache__
 .vscode
 
 .venv
+data
+models
+
 notes.md
 project_structure.md
 
