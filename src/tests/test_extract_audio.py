@@ -29,10 +29,10 @@ class TestExtractAudio(unittest.TestCase):
 
         mock_run.assert_called_once_with(expected_command, check=True)
 
-        def test_get_audio_output_name(self):
-            self.assertEqual(extract_audio.get_audio_output_name('audio'), 'audio.wav')
-            self.assertEqual(extract_audio.get_audio_output_name('audio.wav'), 'audio.wav')
-            self.assertEqual(extract_audio.get_audio_output_name('my.audio'), 'my.audio.wav')
+    def test_get_audio_output_name(self):
+        self.assertEqual(extract_audio.get_audio_output_name('audio'), 'audio.wav')
+        self.assertEqual(extract_audio.get_audio_output_name('audio.wav'), 'audio.wav')
+        self.assertEqual(extract_audio.get_audio_output_name('my.audio'), 'my.audio.wav')
 
 
 if __name__ == '__main__':
