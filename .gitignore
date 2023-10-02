@@ -1,2 +1,9 @@
 __pycache__
 .vscode
+
+.venv
+notes.md
+
+*.avi
+*.mp4
+*.webm
