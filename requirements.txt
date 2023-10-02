@@ -12,6 +12,7 @@ mccabe==0.7.0
 numpy==1.26.0
 platformdirs==3.10.0
 pycparser==2.21
+pydub==0.25.1
 pylint==2.17.7
 requests==2.31.0
 scipy==1.11.3

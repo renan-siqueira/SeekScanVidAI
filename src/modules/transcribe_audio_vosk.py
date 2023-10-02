@@ -3,6 +3,7 @@ import json
 import time
 
 from vosk import Model, KaldiRecognizer
+from pydub import AudioSegment
 
 
 def transcribe_audio_vosk(audio_path: str, model_path: str):
@@ -28,7 +29,25 @@ def format_time(seconds: float) -> str:
         return f"{seconds / 60:.2f} minutes"
     else:
         return f"{seconds / 3600:.2f} hours"
-    
+
+
+def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 60000) -> str:
+    audio = AudioSegment.from_wav(audio_path)
+    num_chunks = len(audio) // chunk_length + (1 if len(audio) % chunk_length else 0)
+
+    transcriptions = []
+    for i in range(num_chunks):
+        start_time = i * chunk_length
+        end_time = (i+1) * chunk_length
+        chunk = audio[start_time:end_time]
+
+        chunk_filename = f'data/processed/chunk_{i}.wav'
+        chunk.export(chunk_filename, format='wav')
+        chunk_transcription = transcribe_audio_vosk(chunk_filename, model_path)
+        transcriptions.append(chunk_transcription)
+
+    return ' '.join(transcriptions)
+
 
 if __name__ == '__main__':
     AUDIO_PATH = "data/processed/ptbr_short_example.wav"
@@ -38,18 +57,18 @@ if __name__ == '__main__':
     json_name = os.path.splitext(file_name)[0] + ".json"
     JSON_OUTPUT_PATH = os.path.join("data/processed", json_name)
 
-    start_time = time.time()
+    START_TIME = time.time()
 
-    transcription = transcribe_audio_vosk(AUDIO_PATH, MODEL_PATH)
+    TRANSCRIPTION = transcribe_by_chunks(AUDIO_PATH, MODEL_PATH)
 
-    elapsed_time = time.time() - start_time
+    elapsed_time = time.time() - START_TIME
     formatted_time = format_time(elapsed_time)
 
     data_to_save = {
         "name": file_name,
         "path": AUDIO_PATH,
         "processing_time": formatted_time,
-        "transcription": transcription
+        "transcription": TRANSCRIPTION
     }
 
     save_to_json(data_to_save, JSON_OUTPUT_PATH)
