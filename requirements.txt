@@ -22,7 +22,7 @@ smart-open==6.4.0
 srt==3.5.3
 tomlkit==0.12.1
 tqdm==4.66.1
-urllib3==2.0.5
+urllib3==2.0.6
 vosk==0.3.45
 websockets==11.0.3
 wrapt==1.15.0
