@@ -66,7 +66,7 @@ def format_time(seconds: float) -> str:
     return f"{seconds / 3600:.2f} hours"
 
 
-def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 30000) -> tuple:
+def transcribe_by_chunks(audio_path: str, model_path: str, chunk_length: int = 10000) -> tuple:
     """
     Transcribe an audio file by splitting it into chunks.
 
@@ -170,30 +170,23 @@ def generate_index_for_chunk(transcription, start_time_ms, chunk_length):
     return index
 
 
-if __name__ == '__main__':
-    AUDIO_PATH = "data/processed/audio/short_example.wav"
-    MODEL_PATH = "models/vosk/vosk-model-small-en-us-0.15"
-    # MODEL_PATH = "models/vosk/vosk-model-small-pt-0.3"
+def main(audio_path: str, model_path: str, json_output_path: str):
+    """Main function to handle the audio transcription process."""
+    start_time = time.time()
 
-    file_name = os.path.basename(AUDIO_PATH)
-    json_name = os.path.splitext(file_name)[0] + ".json"
-    JSON_OUTPUT_PATH = os.path.join("data/processed/json", json_name)
+    transcription, indices = transcribe_by_chunks(audio_path, model_path)
 
-    START_TIME = time.time()
-
-    TRANSCRIPTION, INDICES = transcribe_by_chunks(AUDIO_PATH, MODEL_PATH)
-
-    elapsed_time = time.time() - START_TIME
+    elapsed_time = time.time() - start_time
     formatted_time = format_time(elapsed_time)
 
     data_to_save = {
-        "name": file_name,
-        "path": AUDIO_PATH,
+        "name": os.path.basename(audio_path),
+        "path": audio_path,
         "processing_time": formatted_time,
-        "transcription": TRANSCRIPTION,
-        'indices': INDICES
+        "transcription": transcription,
+        'indices': indices
     }
 
-    save_to_json(data_to_save, JSON_OUTPUT_PATH)
-    print(f"Transcript saved in: {JSON_OUTPUT_PATH}")
+    save_to_json(data_to_save, json_output_path)
+    print(f"Transcript saved in: {json_output_path}")
     print(f"Processing Time: {formatted_time}")
