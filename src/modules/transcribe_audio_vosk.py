@@ -4,13 +4,12 @@ Module to transcribe audio using Vosk and some utility functions.
 import os
 import json
 import time
-import re
-import string
 
 import RAKE
 from vosk import Model, KaldiRecognizer
 from pydub import AudioSegment
-from gensim import corpora, models
+
+from .utils import segment_into_sentences
 
 
 rake = RAKE.Rake(RAKE.SmartStopList())
@@ -117,19 +116,6 @@ def extract_keywords(text):
     return rake.run(text)
 
 
-def segment_into_sentences(text):
-    """
-    Segment the provided text into sentences.
-
-    Parameters:
-    - text: The input text to be segmented into sentences.
-
-    Returns:
-    - A list of sentences.
-    """
-    return re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
-
-
 def generate_index_for_chunk(transcription, start_time_ms, chunk_length):
     """
     Generate index data for a given audio chunk.
@@ -172,35 +158,11 @@ def generate_index_for_chunk(transcription, start_time_ms, chunk_length):
     return index
 
 
-def preprocess_text(text, stopwords):
-    """Tokenize, remove punctuation and remove stopwords."""
-    translator = str.maketrans('', '', string.punctuation)
-    return [word for word in text.translate(translator).lower().split() if word not in stopwords]
-
-
-def extract_topics_from_transcription(transcription, stopwords, num_topics=2):
-    """Extract main topics from given transcription using LDA."""
-    texts = [
-        preprocess_text(sentence, stopwords) for sentence in segment_into_sentences(transcription)
-    ]
-
-    # Create a dictionary and a corpus for LDA
-    dictionary = corpora.Dictionary(texts)
-    corpus = [dictionary.doc2bow(text) for text in texts]
-
-    # Create the LDA model
-    lda_model = models.LdaModel(corpus, num_topics=num_topics, id2word=dictionary, passes=15)
-
-    topics = lda_model.print_topics(num_words=5)
-    return [topic[1] for topic in topics]
-
-
-def main(audio_path: str, model_path: str, json_output_path: str, stopwords: set):
+def main(audio_path: str, model_path: str, json_output_path: str):
     """Main function to handle the audio transcription process."""
     start_time = time.time()
 
     transcription, indices = transcribe_by_chunks(audio_path, model_path)
-    topics = extract_topics_from_transcription(transcription, stopwords)
 
     elapsed_time = time.time() - start_time
     formatted_time = format_time(elapsed_time)
@@ -210,7 +172,6 @@ def main(audio_path: str, model_path: str, json_output_path: str, stopwords: set
         "path": audio_path,
         "processing_time": formatted_time,
         "transcription": transcription,
-        'topics': topics,
         'indices': indices
     }
 
