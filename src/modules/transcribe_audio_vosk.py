@@ -4,11 +4,12 @@ Module to transcribe audio using Vosk and some utility functions.
 import os
 import json
 import time
-import re
 
 import RAKE
 from vosk import Model, KaldiRecognizer
 from pydub import AudioSegment
+
+from .utils import segment_into_sentences
 
 
 rake = RAKE.Rake(RAKE.SmartStopList())
@@ -113,19 +114,6 @@ def extract_keywords(text):
     - A list of keywords extracted from the text.
     """
     return rake.run(text)
-
-
-def segment_into_sentences(text):
-    """
-    Segment the provided text into sentences.
-
-    Parameters:
-    - text: The input text to be segmented into sentences.
-
-    Returns:
-    - A list of sentences.
-    """
-    return re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
 
 
 def generate_index_for_chunk(transcription, start_time_ms, chunk_length):
